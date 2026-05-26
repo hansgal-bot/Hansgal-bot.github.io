@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confetti Celebration</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --primary-hover: #4f46e5;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f3f4f6;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        button {
+            padding: 1rem 2rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button:focus-visible {
+            outline: 3px solid #a5b4fc;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 id="title">Celebrate!</h1>
+        <button id="confetti-btn" aria-label="Trigger confetti animation">
+            Throw Confetti!
+        </button>
+    </div>
+
+    <script>
+        /**
+         * TEACHER-EDITABLE CONTENT
+         * Update these settings to change the behavior of the confetti.
+         */
+        const CONFIG = {
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 }
+        };
+
+        const button = document.getElementById('confetti-btn');
+
+        /**
+         * Triggers the confetti effect using the canvas-confetti library
+         */
+        function triggerConfetti() {
+            confetti({
+                particleCount: CONFIG.particleCount,
+                spread: CONFIG.spread,
+                origin: CONFIG.origin
+            });
+        }
+
+        // Add event listeners for mouse and keyboard
+        button.addEventListener('click', triggerConfetti);
+        
+        button.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                triggerConfetti();
+            }
+        });
+    </script>
+</body>
+</html>
