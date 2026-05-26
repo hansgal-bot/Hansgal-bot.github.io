@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confetti!</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f0f1a; --card: #1a1a2e; --btn-from: #f72585;
+    --btn-to: #7209b7; --text: #f0e6ff; --sub: rgba(240,230,255,0.5); --radius: 18px;
+  }
+  body {
+    min-height: 100vh; background: var(--bg); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-family: 'Segoe UI', system-ui, sans-serif;
+    color: var(--text); padding: 24px; overflow-x: hidden; position: relative;
+  }
+  #canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+  .card {
+    background: var(--card); border: 1px solid rgba(240,230,255,0.08); border-radius: var(--radius);
+    padding: clamp(32px,6vw,64px) clamp(28px,8vw,72px); text-align: center; max-width: 480px;
+    width: 100%; box-shadow: 0 24px 80px rgba(114,9,183,0.25); position: relative; z-index: 1;
+  }
+  .emoji { font-size: clamp(48px,10vw,72px); line-height: 1; margin-bottom: 20px; display: block; transition: transform 0.15s; }
+  h1 { font-size: clamp(22px,5vw,32px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px; }
+  .sub { font-size: clamp(13px,2.5vw,16px); color: var(--sub); margin-bottom: 36px; line-height: 1.5; }
+  #confettiBtn {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: linear-gradient(135deg, var(--btn-from), var(--btn-to));
+    color: #fff; border: none; border-radius: 50px;
+    padding: clamp(14px,3vw,18px) clamp(32px,6vw,52px);
+    font-size: clamp(15px,3vw,18px); font-weight: 700; cursor: pointer;
+    letter-spacing: 0.02em; box-shadow: 0 6px 32px rgba(247,37,133,0.4);
+    transition: transform 0.12s, box-shadow 0.12s; position: relative; outline: none;
+  }
+  #confettiBtn:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 12px 40px rgba(247,37,133,0.55); }
+  #confettiBtn:active { transform: scale(0.96); box-shadow: 0 3px 16px rgba(247,37,133,0.35); }
+  #confettiBtn:focus-visible { outline: 3px solid #f72585; outline-offset: 4px; }
+  #confettiBtn::after {
+    content: ''; position: absolute; inset: 0; border-radius: 50px;
+    border: 3px solid rgba(247,37,133,0.7); opacity: 0; pointer-events: none;
+  }
+  #confettiBtn.burst::after { animation: ring 0.45s ease-out forwards; }
+  @keyframes ring { 0% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(1.6); } }
+  .counter { margin-top: 28px; font-size: 13px; color: var(--sub); letter-spacing: 0.05em; min-height: 20px; }
+  .counter strong { color: #f72585; font-weight: 700; }
+  #muteBtn {
+    margin-top: 18px; background: rgba(240,230,255,0.07); border: 1px solid rgba(240,230,255,0.12);
+    border-radius: 50px; padding: 7px 18px; font-size: 14px; color: var(--sub);
+    cursor: pointer; transition: background 0.15s, color 0.15s; letter-spacing: 0.05em;
+  }
+  #muteBtn:hover { background: rgba(240,230,255,0.13); color: var(--text); }
+  #muteBtn:focus-visible { outline: 2px solid #f72585; outline-offset: 3px; }
+  #muteBtn.muted { opacity: 0.45; }
+  @media (prefers-reduced-motion: reduce) { #confettiBtn, #confettiBtn::after { transition: none; animation: none; } }
+</style>
+</head>
+<body>
+<canvas id="canvas" aria-hidden="true"></canvas>
+<main class="card" role="main">
+  <span class="emoji" aria-hidden="true">🎉</span>
+  <h1>Throw Some Confetti!</h1>
+  <p class="sub">Press the button and watch the magic happen.</p>
+  <button id="confettiBtn" aria-label="Launch confetti"><span aria-hidden="true">🎊</span> Let it rain!</button>
+  <p class="counter" aria-live="polite" aria-atomic="true" id="counter"></p>
+  <button id="muteBtn" aria-label="Mute fairy music" title="Toggle music">🔊</button>
+</main>
+<script>
+const CONFIG = {
+  musicEnabled: true,
+  musicDuration: 4000,
+  musicVolume: 0.38,
+  fairyMelody: [
+    [1047,0.00,0.12],[1319,0.08,0.12],[1568,0.16,0.14],[2093,0.24,0.18],
+    [1760,0.34,0.12],[1568,0.42,0.10],[1397,0.50,0.12],[1319,0.58,0.14],
+    [1047,0.68,0.10],[1175,0.76,0.10],[1319,0.84,0.12],[1568,0.94,0.16],
+    [2093,1.06,0.20],[1760,1.22,0.10],[1319,1.30,0.10],[1047,1.38,0.22],
+    [1568,1.68,0.10],[1760,1.76,0.10],[2093,1.84,0.14],[1760,1.96,0.10],
+    [1568,2.04,0.10],[1319,2.12,0.10],[1175,2.20,0.10],[1047,2.28,0.28],
+    [2093,2.64,0.08],[1760,2.70,0.08],[1568,2.76,0.08],[1319,2.82,0.08],[1047,2.88,0.30],
+  ],
+  pieceCount: 160,
+  duration: 3800,
+  colors: ["#f72585","#7209b7","#3a0ca3","#4361ee","#4cc9f0","#06d6a0","#ffd166","#ef233c","#ffffff"],
+  shapes: ["rect","rect","circle","triangle"],
+  counterMessages: [
+    "First time! Welcome to the party 🥳",
+    "Again! You really like confetti 😄",
+    "Third time! A confetti enthusiast!",
+    "x{n} — you can't stop, can you? 🎉",
+  ],
+};
+
+const canvas = document.getElementById(“canvas”);
+const ctx = canvas.getContext(“2d”);
+const btn = document.getElementById(“confettiBtn”);
+const counter = document.getElementById(“counter”);
+let particles = [], rafId = null, pressCount = 0;
+
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas();
+window.addEventListener(“resize”, resizeCanvas);
+
+class Particle {
+constructor() { this.reset(); }
+reset() {
+const w = canvas.width;
+this.x = w*0.5 + (Math.random()-0.5)w0.6; this.y = -20;
+this.color = CONFIG.colors[Math.floor(Math.random()CONFIG.colors.length)];
+this.shape = CONFIG.shapes[Math.floor(Math.random()CONFIG.shapes.length)];
+this.vx = (Math.random()-0.5)9; this.vy = Math.random()-8-4;
+this.gravity = 0.28+Math.random()0.12; this.drag = 0.985;
+this.w = 7+Math.random()8;
+this.h = this.shape===“rect” ? this.w(0.3+Math.random()0.5) : this.w;
+this.angle = Math.random()Math.PI2; this.spin = (Math.random()-0.5)0.22;
+this.alpha = 1; this.fadeAt = 0.72+Math.random()0.22;
+this.born = performance.now(); this.life = CONFIG.duration(0.7+Math.random()0.4);
+}
+update(now) {
+const age = (now-this.born)/this.life;
+if (age > this.fadeAt) this.alpha = Math.max(0,1-(age-this.fadeAt)/(1-this.fadeAt));
+this.vx=this.drag; this.vy+=this.gravity;
+this.x+=this.vx; this.y+=this.vy; this.angle+=this.spin;
+return age<1 && this.y<canvas.height+40;
+}
+draw(ctx) {
+ctx.save(); ctx.globalAlpha=Math.max(0,this.alpha);
+ctx.translate(this.x,this.y); ctx.rotate(this.angle); ctx.fillStyle=this.color;
+if (this.shape===“circle”) { ctx.beginPath(); ctx.arc(0,0,this.w/2,0,Math.PI2); ctx.fill(); }
+else if (this.shape===“triangle”) {
+const r=this.w/2; ctx.beginPath();
+ctx.moveTo(0,-r); ctx.lineTo(r0.87,r0.5); ctx.lineTo(-r0.87,r0.5);
+ctx.closePath(); ctx.fill();
+} else { ctx.fillRect(-this.w/2,-this.h/2,this.w,this.h); }
+ctx.restore();
+}
+}
+
+function loop(now) {
+ctx.clearRect(0,0,canvas.width,canvas.height);
+particles = particles.filter(p => { const a=p.update(now); if(a) p.draw(ctx); return a; });
+if (particles.length>0) rafId=requestAnimationFrame(loop); else rafId=null;
+}
+
+let audioCtx=null, musicMuted=false;
+function ensureAudioCtx() {
+if (!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+if (audioCtx.state===“suspended”) audioCtx.resume();
+}
+function playFairyMusic() {
+if (!CONFIG.musicEnabled||musicMuted) return;
+ensureAudioCtx();
+const ac=audioCtx;
+const master=ac.createGain();
+master.gain.setValueAtTime(0,ac.currentTime);
+master.gain.linearRampToValueAtTime(CONFIG.musicVolume,ac.currentTime+0.05);
+master.gain.setValueAtTime(CONFIG.musicVolume,ac.currentTime+CONFIG.musicDuration/1000-0.3);
+master.gain.linearRampToValueAtTime(0,ac.currentTime+CONFIG.musicDuration/1000);
+master.connect(ac.destination);
+const reverb=ac.createConvolver();
+const irLen=ac.sampleRate*1.2;
+const irBuf=ac.createBuffer(2,irLen,ac.sampleRate);
+for (let ch=0;ch<2;ch++){const d=irBuf.getChannelData(ch);for(let i=0;i<irLen;i++)d[i]=(Math.random()2-1)Math.pow(1-i/irLen,2.5);}
+reverb.buffer=irBuf; reverb.connect(master);
+const dry=ac.createGain(); dry.gain.value=0.55; dry.connect(master);
+const wet=ac.createGain(); wet.gain.value=0.45; wet.connect(reverb);
+CONFIG.fairyMelody.forEach(([freq,start,dur])=>{
+const t0=ac.currentTime+start;
+const o1=ac.createOscillator(); o1.type=“sine”; o1.frequency.value=freq;
+const o2=ac.createOscillator(); o2.type=“triangle”; o2.frequency.value=freq2;
+const e1=ac.createGain();
+e1.gain.setValueAtTime(0,t0); e1.gain.linearRampToValueAtTime(0.9,t0+0.018);
+e1.gain.exponentialRampToValueAtTime(0.4,t0+dur0.5); e1.gain.exponentialRampToValueAtTime(0.001,t0+dur+0.08);
+const e2=ac.createGain();
+e2.gain.setValueAtTime(0,t0); e2.gain.linearRampToValueAtTime(0.18,t0+0.012);
+e2.gain.exponentialRampToValueAtTime(0.001,t0+dur+0.05);
+o1.connect(e1); e1.connect(dry); e1.connect(wet);
+o2.connect(e2); e2.connect(dry); e2.connect(wet);
+o1.start(t0); o1.stop(t0+dur+0.12);
+o2.start(t0); o2.stop(t0+dur+0.12);
+});
+}
+
+const muteBtn=document.getElementById(“muteBtn”);
+muteBtn.addEventListener(“click”,()=>{
+musicMuted=!musicMuted;
+muteBtn.textContent=musicMuted?“🔇”:“🔊”;
+muteBtn.setAttribute(“aria-label”,musicMuted?“Unmute fairy music”:“Mute fairy music”);
+muteBtn.classList.toggle(“muted”,musicMuted);
+});
+
+function launch() {
+pressCount++;
+playFairyMusic();
+for(let i=0;i<CONFIG.pieceCount;i++) particles.push(new Particle());
+if(!rafId) rafId=requestAnimationFrame(loop);
+btn.classList.remove(“burst”); void btn.offsetWidth; btn.classList.add(“burst”);
+const emoji=document.querySelector(”.emoji”);
+emoji.style.transform=“scale(1.4) rotate(-10deg)”;
+setTimeout(()=>emoji.style.transform=””,200);
+const msgs=CONFIG.counterMessages;
+const idx=Math.min(pressCount-1,msgs.length-1);
+counter.innerHTML=msgs[idx].replace(”{n}”,<strong>${pressCount}</strong>);
+}
+
+btn.addEventListener(“click”,launch);
+btn.addEventListener(“keydown”,e=>{if(e.key===“Enter”||e.key===” “){e.preventDefault();launch();}});
+</script>
+
+</body>
+</html>
+
+Here it is as a live artifact! Hit the button to launch confetti and hear the fairy music. The 🔊 button below toggles sound on/off.
