@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celebration App</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --primary-hover: #4f46e5;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f3f4f6;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        button {
+            padding: 1rem 2rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button:focus-visible {
+            outline: 3px solid #a5b4fc;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 id="title">Celebrate!</h1>
+        <button id="celebrate-btn" aria-label="Trigger confetti and music">
+            Celebrate!
+        </button>
+    </div>
+
+    <script>
+        /**
+         * TEACHER-EDITABLE CONTENT
+         * Update these paths and settings to change the experience.
+         */
+        const CONFIG = {
+            audioSource: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', // URL to audio file
+            confetti: {
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 }
+            }
+        };
+
+        // Initialize Audio object
+        const celebrationAudio = new Audio(CONFIG.audioSource);
+        const button = document.getElementById('celebrate-btn');
+
+        /**
+         * Triggers the confetti and music simultaneously
+         */
+        function triggerCelebration() {
+            // Trigger Confetti
+            confetti({
+                particleCount: CONFIG.confetti.particleCount,
+                spread: CONFIG.confetti.spread,
+                origin: CONFIG.confetti.origin
+            });
+
+            // Play Music
+            // Reset to start if already played
+            celebrationAudio.currentTime = 0;
+            celebrationAudio.play().catch(e => console.error("Audio play failed:", e));
+        }
+
+        // Add event listeners for interaction
+        button.addEventListener('click', triggerCelebration);
+        
+        button.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                triggerCelebration();
+            }
+        });
+    </script>
+</body>
+</html>
